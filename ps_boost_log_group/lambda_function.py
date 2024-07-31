@@ -19,6 +19,7 @@ def lambda_handeler(event, context):
     subject = "ps-boost-prod Alarm Notification nowfor only 403"
 
     # For now I have used my email please change this to your email.
+    # You can choose not to add from address also
     source_email = "varun.ravikolur@plansource.com"
 
     # If you find more types of error then add the filter_pattern here, use the status code as the key
@@ -26,7 +27,7 @@ def lambda_handeler(event, context):
     filter_pattern[403] = "filter @message like /error/| stats count(*)"
 
     alarm_name = event['alarmData']['alarmName']
-    
+
     # The first 3 characters should be the error code status, simalarly keep the alarmName also.
     alarm_name_integer = (int)(alarm_name[:3])
 
@@ -127,7 +128,7 @@ def sanitize_input(input_str):
     sanitized_str = re.sub(r'[\n\r\t\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', input_str)
     return sanitized_str
 
-# Please do not change this code
+# Please remove the source email if not needed.
 def send_email_via_sns(topic_arn, subject, message, source_email):
     sns = boto3.client('sns')
 
