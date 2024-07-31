@@ -7,25 +7,25 @@ from prettytable import PrettyTable
 import logging
 import re
 
+# this is in Plansource Master.
+
+
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 
 def lambda_handeler(event, context):
-    log_group_name = "/aws/elasticbeanstalk/Boost-Prod/var/log/web.stdout.log"
+    log_group_name = "/aws/elasticbeanstalk/Boost-env-Partnerdev/var/log/web.stdout.log"
 
     # Please fill this to recieve the email.
-    topic_arn = ""
-    subject = "elasticbeanstalk Alarm Notification"
+    topic_arn = "arn:aws:sns:us-east-1:126263378245:Alarm_status"
+    subject = "500 Internal Server Error  for /aws/elasticbeanstalk/Boost-env-Partnerdev/var/log/web.stdout.log"
 
     # For now I have used my email please change this to your email.
-    source_email = "varun.ravikolur@plansource.com"
 
-    # If you find more types of error then add the filter_pattern here, use the status code as the key
+    # If you find more types of error then add the filter_pattern here, use the status code as the key.
     filter_pattern = {}
-    filter_pattern[401] = ["filter @message like /401 Unauthorized/ and @message like /guid/ | parse @message '\"orgID\":*,' as orgId | stats count(*) by orgId"]
-    filter_pattern[403] = ["filter @message like /403 Forbidden/ and @message like /guid/ | parse @message '\"orgID\":*,' as orgId | stats count(*) by orgId"]
-    filter_pattern[409] = ["filter @message like /409 CONFLICT/ | parse @message'c.p.n.s.p.MetadataConsumerProcessor      : *:* :' as test,guid| stats count(*) by guid"]
+    filter_pattern[500] = "filter @message like /status code 504/ | filter @message like /Different HttpStatusCodeException/ and @message like /orgID/ | parse @message '\"orgID\":*,' as orgID | stats count(*) by orgID"
 
     alarm_name = event['alarmData']['alarmName']
 
@@ -38,7 +38,6 @@ def lambda_handeler(event, context):
 
     # Start time will be the time when the alarm was trigged last i.e the previous state of the alarm tranction. ie. ALARM -> OK
     # Hence from 'OK' to 'ALARM' we are quering.
-    # Please Check the event(log) that will be deleiverd when an alarm calls for the lambda function for corresponding parsing of the start_time for log insights.
     event_data = event["alarmData"]
     alarm_data = event_data["previousState"]
     reason_data_str = alarm_data["reasonData"]
@@ -48,11 +47,11 @@ def lambda_handeler(event, context):
     epoch_time_seconds = date_obj.timestamp()
     start_epoc_time = int(epoch_time_seconds * 1000)
 
-     # I have added time restriction for the filter comand so that the time gap dosen't exceed 1 day or (86400 * 1000)
-    if (start_epoc_time - end_epoc_time) > 86400 * 1000:
+    # I have added time restriction for the filter comand so that the time gap dosen't exceed 1 day or (86400 * 1000)
+    if (start_epoc_time - end_epoc_time) > (86400 * 1000):
         logger.error("Time difference between start and end time exceeds 1 day")
         # Keep this time difference of only 1 day not more than that. 
-        start_epoc_time = end_epoc_time - (86400 * 1000)
+        start_epoc_time = end_epoc_time - (86400 * 1000) 
 
     try:
         filter_data = filter_events(log_group_name, start_epoc_time, end_epoc_time, filter_pattern[alarm_name_integer])
@@ -60,11 +59,13 @@ def lambda_handeler(event, context):
         logger.error(f"An error occurred while filtering log events: {e}")
 
     # Since there is nothing in data field only the count will be printed., In case you get data uncomment these two line below.
-    # table = generate_table(filter_data)
-    # message = f"Log Group name: {log_group_name}\nError status code:{alarm_name_integer}\nData:\n{table}"
-    message = f"The count of errors before the previous trigger is:\n{len(filter_data)}"
+    table = generate_table(filter_data)
+    if len(filter_data)<30:
+        message = f"Log Group name: {log_group_name}\nError status code:{alarm_name_integer}\nData:\n{table}"
+    else:
+        message = f"The count of errors before the previous trigger is:\n{len(filter_data)}"
     try:
-        email_response = send_email_via_sns(topic_arn, subject, message, source_email)
+        email_response = send_email_via_sns(topic_arn, subject, message)
     except Exception as e:
         logger.error(f"An error occurred while sending email via SNS: {e}")
 
@@ -72,9 +73,9 @@ def lambda_handeler(event, context):
 
 
 
-
 # Please do not change this code
 def filter_events(log_group_name, start_time = 1719014400000, end_time = 1719100799000, filter_pattern = "fields @timestamp, @message, @logStream, @log| sort @timestamp desc| limit 10000"):
+
     client = boto3.client('logs')
     
     start_query_response = client.start_query(
@@ -90,7 +91,7 @@ def filter_events(log_group_name, start_time = 1719014400000, end_time = 1719100
 
     while response == None or response['status'] == 'Running':
         # print('Waiting for query to complete ...')
-        # Let the tim.sleep be there else you might get stack overflow with the while loop continiuosly running.
+        # Let the tim.sleep be there else youwill get stack overflow with the wile loop continiuosly running.
         time.sleep(2)
         response = client.get_query_results(
             queryId=query_id
@@ -129,6 +130,7 @@ def generate_table(response):
 
 #     return response
 
+
 # Please do not change this code
 def sanitize_input(input_str):
     # Remove or replace any potentially dangerous characters or patterns
@@ -142,10 +144,10 @@ def send_email_via_sns(topic_arn, subject, message, source_email):
     # Sanitize inputs
     sanitized_subject = sanitize_input(subject)
     sanitized_message = sanitize_input(message)
-    sanitized_source_email = sanitize_input(source_email)
+    # sanitized_source_email = sanitize_input(source_email)
 
     # Create the email message
-    email_message = f"From: {sanitized_source_email}\nSubject: {sanitized_subject}\n\n{sanitized_message}"
+    email_message = f"\nSubject: {sanitized_subject}\n\n{sanitized_message}"
 
     # Publish the message to the SNS topic
     response = sns.publish(
@@ -156,11 +158,3 @@ def send_email_via_sns(topic_arn, subject, message, source_email):
     )
 
     return response
-
-
-
-
-
-
-
-

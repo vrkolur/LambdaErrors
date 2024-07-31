@@ -44,6 +44,12 @@ def lambda_handeler(event, context):
     date_obj = datetime.datetime.strptime(date_str, '%Y-%m-%dT%H:%M:%S.%f%z')
     epoch_time_seconds = date_obj.timestamp()
     start_epoc_time = int(epoch_time_seconds * 1000)
+    
+     # I have added time restriction for the filter comand so that the time gap dosen't exceed 1 day or (86400 * 1000)
+    if (end_epoc_time - start_epoc_time) > (86400 * 1000):
+        logger.error("Time difference between start and end time exceeds 1 day")
+        # Keep this time difference of only 1 day not more than that. 
+        start_epoc_time = end_epoc_time - (86400 * 1000)
 
     try:
         filter_data = filter_events(log_group_name, start_epoc_time, end_epoc_time, filter_pattern[alarm_name_integer])
