@@ -19,7 +19,7 @@ def lambda_handeler(event, context):
     subject = "ps-boost-prod Alarm Notification nowfor only 403"
 
     # For now I have used my email please change this to your email.
-    # You can choose not to add from address also
+    # You can choose not to add from address also, change it in the send_email_via_sns function
     source_email = "varun.ravikolur@plansource.com"
 
     # If you find more types of error then add the filter_pattern here, use the status code as the key
