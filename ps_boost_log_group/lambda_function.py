@@ -15,12 +15,8 @@ def lambda_handeler(event, context):
     log_group_name = "/aws/lambda/ps-boost-prod"
 
     # Please fill this to recieve the email.
-    topic_arn = ""
+    topic_arn = "arn:aws:sns:us-east-1:126263378245:Alarm_status"
     subject = "ps-boost-prod Alarm Notification nowfor only 403"
-
-    # For now I have used my email please change this to your email.
-    # You can choose not to add from address also, change it in the send_email_via_sns function
-    source_email = "varun.ravikolur@plansource.com"
 
     # If you find more types of error then add the filter_pattern here, use the status code as the key
     filter_pattern = {}
@@ -63,7 +59,7 @@ def lambda_handeler(event, context):
     # message = f"Log Group name: {log_group_name}\nError status code:{alarm_name_integer}\nData:\n{table}"
     message = f"The count of errors before the previous trigger is:\n{len(filter_data)}"
     try:
-        email_response = send_email_via_sns(topic_arn, subject, message, source_email)
+        email_response = send_email_via_sns(topic_arn, subject, message)
     except Exception as e:
         logger.error(f"An error occurred while sending email via SNS: {e}")
 
@@ -135,16 +131,15 @@ def sanitize_input(input_str):
     return sanitized_str
 
 # Please remove the source email if not needed.
-def send_email_via_sns(topic_arn, subject, message, source_email):
+def send_email_via_sns(topic_arn, subject, message):
     sns = boto3.client('sns')
 
     # Sanitize inputs
     sanitized_subject = sanitize_input(subject)
     sanitized_message = sanitize_input(message)
-    sanitized_source_email = sanitize_input(source_email)
 
     # Create the email message
-    email_message = f"From: {sanitized_source_email}\nSubject: {sanitized_subject}\n\n{sanitized_message}"
+    email_message = f"Subject: {sanitized_subject}\n\n{sanitized_message}"
 
     # Publish the message to the SNS topic
     response = sns.publish(
