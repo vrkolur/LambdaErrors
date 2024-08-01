@@ -16,11 +16,8 @@ def lambda_handeler(event, context):
     log_group_name = "/aws/containerinsights/aws-prod-eks-cluster/application"
 
     # Please fill this to recieve the email.
-    topic_arn = ""
+    topic_arn = "arn:aws:sns:us-east-1:126263378245:Alarm_status"
     subject = "aws-prod-eks-cluster Notification now for only 400"
-
-    # For now I have used my email please change this to your email.
-    source_email = "varun.ravikolur@plansource.com"
 
     # If you find more types of error then add the filter_pattern here, use the status code as the key.
     filter_pattern = {}
@@ -48,7 +45,6 @@ def lambda_handeler(event, context):
      # I have added time restriction for the filter comand so that the time gap dosen't exceed 1 day or (86400 * 1000)
     if (end_epoc_time - start_epoc_time) > (86400 * 1000):
         logger.error("Time difference between start and end time exceeds 1 day")
-        # Keep this time difference of only 1 day not more than that. 
         start_epoc_time = end_epoc_time - (86400 * 1000)
 
     try:
@@ -63,7 +59,7 @@ def lambda_handeler(event, context):
     else:
         message = f"The count of errors before the previous trigger is:\n{len(filter_data)}"
     try:
-        email_response = send_email_via_sns(topic_arn, subject, message, source_email)
+        email_response = send_email_via_sns(topic_arn, subject, message)
     except Exception as e:
         logger.error(f"An error occurred while sending email via SNS: {e}")
 
@@ -111,23 +107,6 @@ def generate_table(response):
 
     return table
 
- 
-# Please do not change this code
-# def send_email_via_sns(topic_arn, subject, message, source_email):
-#     sns = boto3.client('sns')
-
-#     # Create the email message
-#     email_message = f"From: {source_email}\nSubject: {subject}\n\n{message}"
-
-#     # Publish the message to the SNS topic
-#     response = sns.publish(
-#         TopicArn=topic_arn,
-#         Message=email_message,
-#         Subject=subject,
-#         MessageStructure='string'
-#     )
-
-#     return response
 
 
 # Please do not change this code
@@ -137,16 +116,15 @@ def sanitize_input(input_str):
     return sanitized_str
 
 # Please do not change this code
-def send_email_via_sns(topic_arn, subject, message, source_email):
+def send_email_via_sns(topic_arn, subject, message):
     sns = boto3.client('sns')
 
     # Sanitize inputs
     sanitized_subject = sanitize_input(subject)
     sanitized_message = sanitize_input(message)
-    sanitized_source_email = sanitize_input(source_email)
 
     # Create the email message
-    email_message = f"From: {sanitized_source_email}\nSubject: {sanitized_subject}\n\n{sanitized_message}"
+    email_message = f"\nSubject: {sanitized_subject}\n\n{sanitized_message}"
 
     # Publish the message to the SNS topic
     response = sns.publish(

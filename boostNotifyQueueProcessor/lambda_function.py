@@ -19,9 +19,6 @@ def lambda_handeler(event, context):
     topic_arn = "arn:aws:sns:us-east-1:126263378245:Alarm_status"
     subject = "boostNotifyQueueProcessor Notification now for only 504"
 
-    # For now I have used my email please change this to your email.
-    source_email = "varun.ravikolur@plansource.com"
-
     # If you find more types of error then add the filter_pattern here, use the status code as the key.
     filter_pattern = {}
     filter_pattern[504] = "filter @message like /status code 504/ | parse @message '\"orgID\":*,' as orgID | stats count(*) by orgID"
@@ -63,7 +60,7 @@ def lambda_handeler(event, context):
     else:
         message = f"The count of errors before the previous trigger is:\n{len(filter_data)}"
     try:
-        email_response = send_email_via_sns(topic_arn, subject, message, source_email)
+        email_response = send_email_via_sns(topic_arn, subject, message)
     except Exception as e:
         logger.error(f"An error occurred while sending email via SNS: {e}")
 
@@ -110,24 +107,6 @@ def generate_table(response):
 
     return table
 
- 
-# Please do not change this code
-# def send_email_via_sns(topic_arn, subject, message, source_email):
-#     sns = boto3.client('sns')
-
-#     # Create the email message
-#     email_message = f"From: {source_email}\nSubject: {subject}\n\n{message}"
-
-#     # Publish the message to the SNS topic
-#     response = sns.publish(
-#         TopicArn=topic_arn,
-#         Message=email_message,
-#         Subject=subject,
-#         MessageStructure='string'
-#     )
-
-#     return response
-
 
 # Please do not change this code
 def sanitize_input(input_str):
@@ -136,16 +115,15 @@ def sanitize_input(input_str):
     return sanitized_str
 
 # Please do not change this code
-def send_email_via_sns(topic_arn, subject, message, source_email):
+def send_email_via_sns(topic_arn, subject, message):
     sns = boto3.client('sns')
 
     # Sanitize inputs
     sanitized_subject = sanitize_input(subject)
     sanitized_message = sanitize_input(message)
-    sanitized_source_email = sanitize_input(source_email)
 
     # Create the email message
-    email_message = f"From: {sanitized_source_email}\nSubject: {sanitized_subject}\n\n{sanitized_message}"
+    email_message = f"\nSubject: {sanitized_subject}\n\n{sanitized_message}"
 
     # Publish the message to the SNS topic
     response = sns.publish(

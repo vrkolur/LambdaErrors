@@ -21,7 +21,6 @@ def lambda_handeler(event, context):
     topic_arn = "arn:aws:sns:us-east-1:126263378245:Alarm_status"
     subject = "500 Internal Server Error  for /aws/elasticbeanstalk/Boost-env-Partnerdev/var/log/web.stdout.log"
 
-    # For now I have used my email please change this to your email.
 
     # If you find more types of error then add the filter_pattern here, use the status code as the key.
     filter_pattern = {}
@@ -144,7 +143,6 @@ def send_email_via_sns(topic_arn, subject, message, source_email):
     # Sanitize inputs
     sanitized_subject = sanitize_input(subject)
     sanitized_message = sanitize_input(message)
-    # sanitized_source_email = sanitize_input(source_email)
 
     # Create the email message
     email_message = f"\nSubject: {sanitized_subject}\n\n{sanitized_message}"
